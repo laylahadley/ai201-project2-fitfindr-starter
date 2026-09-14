@@ -143,6 +143,18 @@ One major divergence from the original specification was changing the assigned G
 
 Your implementation files go in this same directory. There's no required file structure for your agent code — organize it however makes sense for your design.
 
+##AI Usage
+
+**Instance 1: Agent Loop Implementation**
+     **Input:** I provided Claude Code with the Architecture Diagram and Section 2 (Planning Loop) from my `planning.md`.
+     **Output:** It generated the `run_agent()` function, including the `_new_session` state dictionary and the sequential tool calls.
+     **Override:** I had to manually intervene and add a `max_tokens=150` parameter to the LLM call, as the model was hitting rate limits by attempting to reserve too many output tokens for a simple JSON extraction.
+
+**Instance 2: Tool Implementation**
+     **Input:** I used Cursor to highlight the `suggest_outfit` stub and provided it with my Tool Inventory spec, instructing it to write the Groq API call.
+     **Output:** Cursor drafted the system prompts and the try/except block for the API call. 
+     **Override:** I modified the prompt logic to explicitly check `if not items:` and swap between two entirely different system prompts depending on whether the wardrobe was empty or populated.
+
 ## Demo video
 see demo video here --> [https://youtu.be/Ya-3KfYsiGQ]
 
