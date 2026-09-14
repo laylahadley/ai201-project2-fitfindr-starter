@@ -17,6 +17,7 @@ You must have at least 3 tools. The three required tools are listed — add any 
 **What it does:**
 <!-- Describe what this tool does in 1–2 sentences -->
 
+
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
 - `description` (str): ...
@@ -139,14 +140,70 @@ Write out what a full user interaction looks like from start to finish — tool 
 
 **Example user query:** "I'm looking for a vintage graphic tee under $30. I mostly wear baggy jeans and chunky sneakers. What's out there and how would I style it?"
 
-**Step 1:**
-<!-- What does the agent do first? Which tool is called? With what input? -->
 
-**Step 2:**
-<!-- What happens next? What was returned from step 1? What tool is called now? -->
+**What FitFindr Does:**
+FitFindr is an AI agent that parses a user's natural language request for secondhand clothing, triggering a search tool to find matches in a mock database, and sequentially passes those results to an outfit suggester and a social-media caption generator. If a step fails, such as the search tool returning zero matches, the agent immediately halts the tool chain, informs the user of the failure, and requests modified search criteria rather than passing empty data to the next tool.
 
-**Step 3:**
-<!-- Continue until the full interaction is complete -->
+**Trace Example:**
+* **User Query:** "I'm looking for a vintage graphic tee under $30, size M. I mostly wear baggy jeans and chunky sneakers."
+     * **Step 1:** The agent calls `search_listings(description="vintage graphic tee", size="M", max_price=30.0)`. It finds a match (e.g., a $22 Faded Band Tee) and holds it in the session state.
+     * **Step 2:** The agent calls `suggest_outfit(new_item=<band tee>, wardrobe=<user's wardrobe>)`. It returns styling advice based on the user's baggy jeans and chunky sneakers. 
+     * **Step 3:** The agent calls `create_fit_card(outfit=<suggestion>, new_item=<band tee>)` to generate a short, shareable text snippet summarizing the thrifted find and the outfit.
+     **Final output to user:** 
+     Based on the example trace, the final output would look something like this:"I found a great match for you! I tracked down a Faded Band Tee in size M for $22 on Depop.
+     How to style it:
+     Pair this with your wide-leg jeans and platform Docs for a classic 90s grunge look. Roll the sleeves once and tuck the front corner slightly for shape.
+     Your Fit Card:
+     thrifted this faded band tee off depop for $22 and honestly it was made for my wide-legs 🖤 full look in my stories"
 
-**Final output to user:**
-<!-- What does the user actually see at the end? -->
+
+
+---------------------------------------------------------------------
+ORIGINAL PLANNING.MD OUTPUT - GEMINI
+# FitFindr Planning Document
+
+## 1. Tool Inventory & AI Tool Plan
+* **`search_listings(description: str, size: str, max_price: float) -> list[dict]`**
+  * **Input:** Description of the item (e.g., "vintage denim jacket"), size preference, and a maximum price.
+  * **Output:** A list of dictionary objects representing mock clothing listings matching the criteria.
+  * **Purpose:** Acts as the primary search mechanism to query the mock dataset for secondhand clothing.
+
+* **`suggest_outfit(new_item: dict, wardrobe: list[dict]) -> list[str]`**
+  * **Input:** A dictionary representing the newly found item, and a list of dictionaries representing the user's current wardrobe items.
+  * **Output:** A list of strings, each describing a potential outfit combination.
+  * **Purpose:** Helps the user visualize how the new item integrates with what they already own.
+
+* **`create_fit_card(outfit: str, new_item: dict) -> str`**
+  * **Input:** A string describing the chosen outfit and the dictionary of the newly found item.
+  * **Output:** A short, punchy string designed for social media sharing (e.g., an Instagram caption).
+  * **Purpose:** Summarizes the final style choice in a fun, shareable format.
+
+## 2. Planning Loop and State Management
+The agent will operate using a ReAct (Reasoning and Acting) or sequential planning loop via the Groq LLM. 
+* **State Management:** A central `session_state` dictionary (or context history) will be maintained during the execution loop. When `search_listings` returns an item, it will be appended to the current state context so that when the agent decides to call `suggest_outfit`, it has direct access to the exact item dictionary without asking the user to re-input details.
+* **Planning Loop:** The LLM receives the user prompt and available tools. It will first call `search_listings`. Upon receiving the result back in the prompt context, it will reason that it needs to integrate the item into the wardrobe, calling `suggest_outfit`. Finally, upon receiving the outfit ideas, it will call `create_fit_card`.
+
+## 3. Error-Handling Table & Interaction Walkthrough
+
+| Tool | Potential Error / Failure Mode | Agent Fallback Strategy |
+| :--- | :--- | :--- |
+| `search_listings` | Returns an empty list (no matches found). | The agent will inform the user that no items matched the specific criteria and ask if they would like to increase the `max_price` or broaden the `description`. |
+| `suggest_outfit` | User's `wardrobe` array is empty or missing. | The agent will generate a "capsule" outfit suggestion using standard basics (e.g., plain white tee, classic blue jeans) to show how the item could be styled generally. |
+| `create_fit_card` | Model fails to format output or returns empty string. | The agent will utilize a hardcoded fallback template string: *"Snagged this [Item Name]! Ready to pair it with my [Outfit Element]. #ThriftScore"* |
+
+## 4. Architecture Diagram
+```mermaid
+graph TD
+    User([User Request]) --> Agent[AI Agent Controller]
+    Agent -->|State/Context| SessionState[(Session State)]
+    
+    Agent -->|1. Call search_listings| Tool1[search_listings]
+    Tool1 -->|Return matches or empty| Agent
+    
+    Agent -->|2. Call suggest_outfit| Tool2[suggest_outfit]
+    Tool2 -->|Return outfit ideas| Agent
+    
+    Agent -->|3. Call create_fit_card| Tool3[create_fit_card]
+    Tool3 -->|Return social caption| Agent
+    
+    Agent --> FinalResponse([Final Fit Card to User])
