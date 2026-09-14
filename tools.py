@@ -27,7 +27,7 @@ load_dotenv()
 
 # Initialize Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"
+MODEL_NAME = "qwen/qwen3.8-27b"  # Updated model string
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
@@ -129,7 +129,13 @@ def suggest_outfit(new_item: dict, wardrobe: Optional[dict] = None) -> str:
             temperature=0.7,
             max_tokens=150,
         )
-        return response.choices[0].message.content.strip()
+        
+        # --- NEW DEBUG LINES ---
+        raw_output = response.choices[0].message.content
+        print(f"\n[DEBUG suggest_outfit raw output]: '{raw_output}'")
+        # -----------------------
+        
+        return raw_output.strip()
     except Exception as e:
         return f"Styling suggestion unavailable: {e}"
 
