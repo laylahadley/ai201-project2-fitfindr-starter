@@ -20,31 +20,24 @@ from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
 
 # ── query handler ─────────────────────────────────────────────────────────────
 
-def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
+
+def handle_query(query: str, wardrobe: dict):
     """
-    Called by Gradio when the user submits a query.
-
-    Args:
-        user_query:     The text the user typed into the search box.
-        wardrobe_choice: Either "Example wardrobe" or "Empty wardrobe (new user)".
-
-    Returns:
-        A tuple of three strings:
-            (listing_text, outfit_suggestion, fit_card)
-        Each string maps to one of the three output panels in the UI.
-
-    TODO:
-        1. Guard against an empty query (return early with an error message).
-        2. Select the wardrobe based on wardrobe_choice.
-        3. Call run_agent() with the query and selected wardrobe.
-        4. If session["error"] is set, return the error in the first panel
-           and empty strings for the other two.
-        5. Otherwise, format session["selected_item"] into a readable listing_text
-           string and return it along with session["outfit_suggestion"] and
-           session["fit_card"].
+    Takes the Gradio inputs, runs the agent, and formats the outputs for the UI panels.
+    Returns a tuple of three strings: (Item Output, Outfit Output, Fit Card Output).
     """
-    # TODO: implement this function
-    return "Agent not yet implemented.", "", ""
+    # Execute the agent loop
+    session = run_agent(query, wardrobe)
+    
+    # Handle the error branch (e.g., if search_listings returned empty)
+    if session["error"]:
+        return (session["error"], "Process halted.", "Process halted.")
+    
+    # Format the successful outputs
+    item = session["selected_item"]
+    item_str = f"Found: {item.get('title', 'Item')} - ${item.get('price', 0)}\nPlatform: {item.get('platform', 'Unknown')}"
+    
+    return (item_str, session["outfit_suggestion"], session["fit_card"])    
 
 
 # ── interface ─────────────────────────────────────────────────────────────────
